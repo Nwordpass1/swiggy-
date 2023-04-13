@@ -1,0 +1,121 @@
+class Card {
+  constructor(rank, suit) {
+    this.rank = rank;
+    this.suit = suit;
+  }
+
+  toString() {
+    return `${this.rank} of ${this.suit}`;
+  }
+}
+
+class Deck {
+  constructor() {
+    this.cards = [];
+  }
+
+  initialize() {
+    const suits = ['Clubs', 'Diamonds', 'Hearts', 'Spades'];
+    const ranks = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King'];
+
+    for (const suit of suits) {
+      for (const rank of ranks) {
+        this.cards.push(new Card(rank, suit));
+      }
+    }
+  }
+
+  shuffle() {
+    for (let i = this.cards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
+    }
+  }
+
+  deal(numCards) {
+    const dealtCards = [];
+
+    for (let i = 0; i < numCards; i++) {
+      dealtCards.push(this.cards.pop());
+    }
+
+    return dealtCards;
+  }
+}
+
+class Player {
+  constructor(name) {
+    this.name = name;
+    this.hand = [];
+    this.skipped = false;
+  }
+
+  playCard(cardIndex, discardPile) {
+    const card = this.hand[cardIndex];
+
+    if (card.suit === discardPile[0].suit || card.rank === discardPile[0].rank) {
+      discardPile.unshift(card);
+      this.hand.splice(cardIndex, 1);
+
+      if (['Ace', 'King', 'Queen', 'Jack'].includes(card.rank)) {
+        this.processActionCard(card.rank, discardPile);
+      }
+    } else {
+      throw new Error(`${card} cannot be played on ${discardPile[0]}`);
+    }
+  }
+
+  drawCard(deck) {
+    const card = deck.cards.pop();
+
+    if (card) {
+      this.hand.push(card);
+    } else {
+      throw new Error('Deck is empty');
+    }
+  }
+
+  processActionCard(rank, discardPile) {
+    switch (rank) {
+      case 'Ace':
+        discardPile[1].skipped = true;
+        break;
+      case 'King':
+        discardPile.reverse();
+        break;
+      case 'Queen':
+        const nextPlayerIndex = (discardPile[1].skipped ? 2 : 1) % discardPile.length;
+        discardPile[nextPlayerIndex].drawCard(2);
+        break;
+      case 'Jack':
+        const nextPlayerIndex = (discardPile[1].skipped ? 2 : 1) % discardPile.length;
+        discardPile[nextPlayerIndex].drawCard(4);
+        break;
+    }
+  }
+}
+
+class Game {
+  constructor(playerNames) {
+    this.deck = new Deck();
+    this.discardPile = [];
+    this.players = playerNames.map(name => new Player(name));
+    this.currentPlayerIndex = 0;
+  }
+
+  start() {
+    this.deck.initialize();
+    this.deck.shuffle();
+
+    for (const player of this.players) {
+      player.hand = this.deck.deal(5);
+    }
+
+    this.discardPile.unshift(this.deck.cards.pop());
+  }
+
+  playTurn(cardIndex) {
+    const currentPlayer = this.players[this.currentPlayerIndex];
+
+    try {
+      currentPlayer.playCard(cardIndex,
